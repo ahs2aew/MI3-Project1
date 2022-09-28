@@ -1,0 +1,252 @@
+---
+title: "DS4002-Project1"
+author: "Anna Stein"
+date: "9/12/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r}
+install.packages("readxl")
+library("readxl")
+annual_movement_data = read_excel("/Users/Anna/Downloads/hst_mig_a_1 (3).xlsx")
+annual_movement_data = na.omit(annual_movement_data)
+```
+
+
+changing column headings
+```{r}
+library(dplyr)
+names(annual_movement_data)[2] = "Total Population (over 1 year old)"
+names(annual_movement_data)[3] = "Total Non-Movers"
+names(annual_movement_data)[4] = "Total Movers"
+names(annual_movement_data)[5] = "REMOVE: Total Movers" #actually, just take this column out ?? 
+names(annual_movement_data)[6] = "Total Movers that stayed in same county"
+names(annual_movement_data)[7] = "Total Movers that moved to different county"
+names(annual_movement_data)[8] = "Total Movers: different county, same state"
+names(annual_movement_data)[9] = "Total Movers: different county, different state"
+
+# need to take out column 5 and column 10 
+
+drop = c("REMOVE: Total Movers", "...10")
+annual_mvmt_data = annual_movement_data[,!(names(annual_movement_data)%in%drop)]
+# going forward new dataset 
+
+names(annual_mvmt_data)[1] = "Mobility Period"
+```
+
+going to drop rows that denote the percentages instead of the levels (just personal preference)
+```{r}
+annual_mvmt_data = annual_mvmt_data[-c(72:142),]
+```
+
+exploratory questions: 
+- what proportion of the total U.S. population moves each year? 
+- out of total movers, what proportion are staying in the same state (same or different county) vs. leaving the state? 
+
+can create new columns for each of these proportions 
+
+```{r}
+#annual_mvmt_data$ProportionOfMovers = annual_mvmt_data$`Total Movers` / annual_mvmt_data$`Total Population (over 1 year old)` # didn't work bc columns are characters, need to be numeric
+
+i = c(2:8)
+annual_mvmt_data[,i] = apply(annual_mvmt_data[,i], 2, function(x) as.numeric(as.character(x)))
+# now columns are numeric 
+
+annual_mvmt_data$ProportionOfMovers = annual_mvmt_data$`Total Movers` / annual_mvmt_data$`Total Population (over 1 year old)`
+```
+
+```{r}
+annual_mvmt_data$`Mobility Period` = as.factor(annual_mvmt_data$`Mobility Period`)
+# want to only have one year as the mobility period, the second year listed
+annual_mvmt_data$`Mobility Period` = substr(annual_mvmt_data$`Mobility Period`, 6, 9)
+```
+
+Line Graph 1 
+```{r}
+library(ggplot2)
+line_graph = ggplot(data=annual_mvmt_data, aes(x=annual_mvmt_data$`Mobility Period`,y=annual_mvmt_data$ProportionOfMovers, group=1)) + geom_line(color="#aa0022",size=1)+scale_x_discrete(breaks=c("1950","1960","1970","1980","1990","2000", "2010", "2020")) + labs(x="Year", y="Proportion of Total Population that Moved") + ylim(0.000,0.300)
+
+line_graph
+```
+
+
+Now want to answer the question: out of total movers, what proportion are staying in the same state (same or different county) vs. leaving the state? 
+```{r}
+# make a new column for movers that are staying in the same state
+# make a new column for movers that are leaving the state
+
+annual_mvmt_data$OutOfStateMovers = annual_mvmt_data$`Total Movers: different county, different state`/annual_mvmt_data$`Total Movers`
+
+annual_mvmt_data$WithinStateMovers = (annual_mvmt_data$`Total Movers that stayed in same county` + annual_mvmt_data$`Total Movers: different county, same state`)/annual_mvmt_data$`Total Movers`
+```
+
+can make a line graph showing how the proportion of total movers that leave their home state
+has changed over time 
+```{r}
+line_graph1 = ggplot(data=annual_mvmt_data, aes(x=annual_mvmt_data$`Mobility Period`,y=annual_mvmt_data$OutOfStateMovers, group=1)) + geom_line(color="#aa0023",size=1)+scale_x_discrete(breaks=c("1950","1960","1970","1980","1990","2000", "2010", "2020")) + labs(x="Year", y="Proportion of Total Movers that Moved to a Different State") + ylim(0.05,0.30)
+
+line_graph1
+```
+This chart isn't that interesting  ... seems like the proportion of people that move that leave for a different state hasn't changed a ton over time (since roughly 1950)
+
+Conclusions from first dataset: 
+1. The rate at which people move has declined over time ... the proportion of 'movers' for each year relative to the whole population has trended down overall since ~1950. The beginning of the faster decrease in moves began around the 1980s 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Going to move on to dataset that includes reason for moving
+```{r}
+reasons_data = read_excel("/Users/Anna/Downloads/hst_mig_a_5 (3).xlsx")
+```
+
+
+renaming columns
+```{r}
+names(reasons_data)[1] = "Mobility Period"
+names(reasons_data)[2] = "Total Movers (Over 1 yrs old)"
+names(reasons_data)[3] = "Family: Change in Marital Status"
+names(reasons_data)[4] = "Family: To Establish Own Household"
+names(reasons_data)[5] = "Family: Other"
+names(reasons_data)[6] = "Employment: New Job or Job Transfer"
+names(reasons_data)[7] = "Employment: Look for Work, or Lost Job"
+names(reasons_data)[8] = "Employment: To be Closer to Work"
+names(reasons_data)[9] = "Employment: Retired"
+names(reasons_data)[10] = "Employment: Other"
+names(reasons_data)[11] = "Housing: Wanted to Own, Not Rent Home"
+names(reasons_data)[12] = "Housing: Wanted Newer/Better/Larger Home"
+names(reasons_data)[13] = "Housing: Wanted Better/Safer Neighborhood"
+names(reasons_data)[14] = "Housing: Wanted Cheaper Housing"
+names(reasons_data)[15] = "Housing: Foreclosure/Evicted"
+names(reasons_data)[16] = "Housing: Other"
+names(reasons_data)[17] = "Misc: Relationship with Unmarried Partner"
+names(reasons_data)[18] = "Misc: to Attend or Leave College"
+names(reasons_data)[19] = "Misc: Change in Climate"
+names(reasons_data)[20] = "Misc: Health Reasons"
+names(reasons_data)[21] = "Misc: Natural Disaster"
+names(reasons_data)[22] = "Misc: Other"
+```
+
+```{r}
+# now remove the next couple rows that held the names 
+reasons_data = reasons_data[6:89, ]
+#View(reasons_data)
+```
+
+```{r}
+# want 'mobility period' to focus on the second year listed rather than the range 
+reasons_data$`Mobility Period` = substr(reasons_data$`Mobility Period`, 6, 9)
+```
+
+```{r}
+reasons_data = na.omit(reasons_data)
+```
+
+```{r}
+# going to take out percentage rows/columns in favor of the row values that are numbers of people
+reasons_data = reasons_data[1:25,]
+```
+
+```{r}
+# going to make columns for the total of each major category: Family, Employment, Housing, Misc.
+# first need to make columns numeric
+i = c(2:22)
+reasons_data[,i] = apply(reasons_data[,i], 2, function(x) as.numeric(as.character(x)))
+
+total_family = reasons_data$`Family: Change in Marital Status` + reasons_data$`Family: To Establish Own Household` + reasons_data$`Family: Other`
+reasons_data$`Total Family-Related Moves` = total_family 
+
+total_emp = reasons_data$`Employment: New Job or Job Transfer` + reasons_data$`Employment: Look for Work, or Lost Job`+reasons_data$`Employment: To be Closer to Work` + reasons_data$`Employment: Retired`+reasons_data$`Employment: Other`
+reasons_data$`Total Employment-Related Moves` = total_emp
+
+
+
+housing1 = reasons_data$`Housing: Wanted to Own, Not Rent Home` + reasons_data$`Housing: Wanted Newer/Better/Larger Home`
+housing2 = reasons_data$`Housing: Wanted Better/Safer Neighborhood` + reasons_data$`Housing: Wanted Cheaper Housing`
+housing3 = reasons_data$`Housing: Other`
+reasons_data$total_housing = housing1 + housing2 + housing3
+
+#total_housing = reasons_data$`Housing: Wanted to Own, Not Rent Home` + reasons_data$`Housing: Wanted Newer/Better/Larger Home` + reasons_data$`Housing: Wanted Better/Safer Neighborhood` + reasons_data$`Housing: Wanted Cheaper Housing` + reasons_data$`Housing: Foreclosure/Evicted` + reasons_data$`Housing: Other`
+#reasons_data$`Total Housing-Related Moves` = total_housing
+
+# now we have 3 new columns for the total number of moves that fall into 3 of the main categories (family, employment, and housing)
+
+# now, going to make 3 more columns that give the proportion of total moves that were due to the overall categories of housing, family, or employment
+
+reasons_data[is.na(reasons_data)] = 0 # replacing NAs with zeros so that we can still get proportions 
+# idk if this is a legit strategy but it should work for now
+# because we aren't doing averages or anyting like that yet 
+
+
+reasons_data$`Proportion of Total Moves that were Family-Related` = reasons_data$`Total Family-Related Moves`/reasons_data$`Total Movers (Over 1 yrs old)`
+
+reasons_data$`Proportion of Total Moves that were Employmt-Related` = reasons_data$`Total Employment-Related Moves`/reasons_data$`Total Movers (Over 1 yrs old)`
+
+reasons_data$`Proportion of Total Moves that were Housing-Related` = reasons_data$total_housing/reasons_data$`Total Movers (Over 1 yrs old)`
+
+
+## something is wrong becasue it is seeing the 0s in certain columns (like for one of the housing columns) and making the 'total housing' number also = 0
+# maybe need to convert these specific columns back to numeric??
+reasons_data$`Housing: Foreclosure/Evicted` = as.numeric(reasons_data$`Housing: Foreclosure/Evicted`)
+
+reasons_data$`Misc: Relationship with Unmarried Partner` = as.numeric(reasons_data$`Misc: Relationship with Unmarried Partner`)
+# that didn't change the problem, will have to revisit this
+```
+
+
+## Line graphs:
+1. Over the past 20 years, what proportion of moves were housing related in some way (each year)? 
+```{r}
+line_graph2 = ggplot(data=reasons_data, aes(x=reasons_data$`Mobility Period`,y=reasons_data$`Proportion of Total Moves that were Housing-Related`, group=1)) + geom_line(color="darkblue",size=1)+ labs(x="Year", y="Proportion of Total Moves that were Housing-Related")+ylim(0.0,0.6)+scale_x_discrete(breaks=c("1990", "2000", "2010", "2020"))+geom_hline(yintercept = mean(reasons_data$`Proportion of Total Moves that were Housing-Related`), color="cornflowerblue")
+
+line_graph2
+```
+
+
+2. Over the past 20 years, what proportion of moves were employment related in some way (each year)?
+
+```{r}
+line_graph3 = ggplot(data=reasons_data, aes(x=reasons_data$`Mobility Period`,y=reasons_data$`Proportion of Total Moves that were Employmt-Related`, group=1)) + geom_line(color="chartreuse4",size=1)+ labs(x="Year", y="Proportion of Total Moves that were Emplymt-Related")+ylim(0.0,0.6)+scale_x_discrete(breaks=c("1990", "2000", "2010", "2020"))+geom_hline(yintercept = mean(reasons_data$`Proportion of Total Moves that were Employmt-Related`), color="chartreuse3")
+
+line_graph3
+```
+
+
+Over the past 20 years, what proportion of moves were family-related in some way (each year)? 
+```{r}
+line_graph4 = ggplot(data=reasons_data, aes(x=reasons_data$`Mobility Period`,y=reasons_data$`Proportion of Total Moves that were Family-Related`, group=1)) + geom_line(color="mediumorchid4",size=1)+ labs(x="Year", y="Proportion of Total Moves that were Family-Related")+ylim(0.0,0.6)+scale_x_discrete(breaks=c("1990", "2000", "2010", "2020"))+geom_hline(yintercept = mean(reasons_data$`Proportion of Total Moves that were Family-Related`), color="mediumorchid1")
+
+line_graph4
+```
+
+writing new dataframe into a CSV
+```{r}
+write.csv(reasons_data, "C://Users/Anna/DS3001/DS-3001-updated/reasons_data.csv", row.names=TRUE)
+```
+
+```{r}
+# need to take out the column for foreclosure/eviction due to high amount of missing values 
+reasons_data = reasons_data[,-c(15)]
+```
+
+```{r}
+# need to take out the column called "total housing-related moves" because its redundant, just want to use "total_housing" column
+reasons_data = reasons_data[,-c(24)]
+```
+
+
+
+
