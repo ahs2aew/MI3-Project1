@@ -24,6 +24,8 @@ output.
 
 ## DATA 
 
+Link to data: https://github.com/ahs2aew/MI3-Project1/tree/main/Data
+
 Reasons for Move Data:
 | Variable Name                            | Description |
 | -----------                              | ----------- |
